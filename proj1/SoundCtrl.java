@@ -110,13 +110,13 @@ public class SoundCtrl{
           //sinout = new ByteArrayOutputStream();
           running = true; // running = flag
           try {
+            System.out.println("Frequency of Signal 1 : "+ 1000);
+            System.out.println("Frequency of Signal 2 : "+ 10000);
             while (running) {
               double frequencyOfSignal1 = 1000.0;
               double frequencyOfSignal2 = 10000.0;
               double samplingInterval1 = (double) (sinformat.getSampleRate()/frequencyOfSignal1);
               double samplingInterval2 = (double) (sinformat.getSampleRate()/frequencyOfSignal2);
-              System.out.println("Frequency of Signal 1 : "+ frequencyOfSignal1);
-              System.out.println("Frequency of Signal 2 : "+ frequencyOfSignal2);
               for(int i=0;i<buffer.length;i++){
                 //double time = i/sinformat.getSampleRate();
                 //double sinValue = Math.sin(2*)
@@ -190,12 +190,21 @@ public class SoundCtrl{
         System.out.println("Press Enter to start playing...");
         br.read();
         System.out.println("---------Playing Sin Sound ---------");
+        System.out.println("Press Enter to stop playing...");
         sc.playSinAudio();
+
+        br.read();
+        sc.running=false;
+
 
 
       } else if(userChoice==3){
         System.out.println("--------Program End ----------");
         ProgramRun=false;
+      }
+      else{
+        System.out.println("Wrong Input");
+        continue;
       }
     }
 
