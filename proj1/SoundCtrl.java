@@ -145,35 +145,31 @@ public class SoundCtrl{
     }
   }
 
-  private static byte[] generateSineWavefreq(int frequencyOfSignal, int seconds) {
-    // total samples = (duration in second) * (samples per second)
 
-    byte[] sin = new byte[seconds * 8000];
-    double samplingInterval = (double) (8000 / frequencyOfSignal);
-    System.out.println("Sampling Frequency  : "+8000);
-    System.out.println("Frequency of Signal : "+frequencyOfSignal);
-    System.out.println("Sampling Interval   : "+samplingInterval);
-    for (int i = 0; i < sin.length; i++) {
-      double angle = (2.0 * Math.PI * i) / samplingInterval;
-      sin[i] = (byte) (Math.sin(angle) * 127);
-      //System.out.println("" + sin[i]);
+  public void player(File file){
+    try {
+      AudioInputStream bgm = AudioSystem.getAudioInputStream(file);
+    }catch (Exception e){
+      e.printStackTrace();
     }
-    return sin;
   }
 
   public static void main(String[] args) throws IOException,InterruptedException{
 
     System.out.println("---------Program Start---------");
+
+
     boolean ProgramRun=true;
     while (ProgramRun) {
-      System.out.println("Choose one mood (1,2,3) ---> 1(Part1) 2(Part2) 3(Exit)...");
+      System.out.println("Choose one mood (1,2,3) ---> 1(Part1-1) 2(Part1-2) 3(part2) 4(Exit)...");
       Scanner scan = new Scanner(System.in);
       int userChoice = scan.nextInt();
       BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
       SoundCtrl sc = new SoundCtrl();
+
       //1->record 2->palyisn 3->exit
       if (userChoice == 1) {
-        System.out.println("Enter Part 1...");
+        System.out.println("Enter Part 1-1...");
         System.out.println("Press Enter to start recording...");
         int temp = br.read();
         System.out.println("---------Record Start---------");
@@ -185,7 +181,32 @@ public class SoundCtrl{
         System.out.println("---------Playing Start---------");
         sc.playAudio();
 
-      } else if (userChoice == 2) {
+      } else if(userChoice==2){
+        ///////  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        System.out.println("Enter Part 1-2...");
+        try {
+          AudioInputStream bgm = AudioSystem.getAudioInputStream(new File("bgm.wav"));
+          AudioFormat format = bgm.getFormat();
+          DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
+          SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info);
+          line.open(format);
+          line.start();
+          int nBytesRead = 0;
+          byte[] buffer = new byte[512];
+          while (true) {
+            nBytesRead = bgm.read(buffer, 0, buffer.length);
+            if (nBytesRead <= 0)
+              break;
+            line.write(buffer, 0, nBytesRead);
+          }
+          line.drain();
+          line.close();
+        }catch (Exception e){
+          e.printStackTrace();
+        }
+
+
+      } else if (userChoice == 3) {
         System.out.println("Enter Part 2...");
         System.out.println("Press Enter to start playing...");
         br.read();
@@ -198,7 +219,7 @@ public class SoundCtrl{
 
 
 
-      } else if(userChoice==3){
+      } else if(userChoice==4){
         System.out.println("--------Program End ----------");
         ProgramRun=false;
       }
