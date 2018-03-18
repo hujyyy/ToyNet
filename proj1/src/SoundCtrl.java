@@ -215,8 +215,6 @@ public class SoundCtrl{
               double samplingInterval1 = (double) (sinformat.getSampleRate()/frequencyOfSignal1);
               double samplingInterval2 = (double) (sinformat.getSampleRate()/frequencyOfSignal2);
               for(int i=0;i<buffer.length;i++){
-                //double time = i/sinformat.getSampleRate();
-                //double sinValue = Math.sin(2*)
                 double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
                 double angle2 = (2.0 * Math.PI * i) / samplingInterval2;
                 buffer[i] = (byte) (Math.sin(angle1) + Math.sin(angle2));
@@ -270,7 +268,7 @@ public class SoundCtrl{
 
 
   }
-    public void FSK(){
+    public void FSK(int input_sample_rate){
 
         try {
 
@@ -290,7 +288,7 @@ public class SoundCtrl{
             int sample_rate = 44000;
             byte inputarray[] = result.getBytes();
             //System.out.print(inputarray[0]);
-            byte soundarray[] = new byte[inputarray.length*440];
+            byte soundarray[] = new byte[inputarray.length*input_sample_rate];
             double frequencyOfSignal1 = 1200.0;
             double frequencyOfSignal2 = 12000.0;
             double samplingInterval1 = (double) (sample_rate/frequencyOfSignal1);
@@ -298,7 +296,7 @@ public class SoundCtrl{
             for(int i = 0;i<soundarray.length;i++){
                 double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
                 double angle2 = (2.0 * Math.PI * i) / samplingInterval2;
-                int index = i/440;
+                int index = i/input_sample_rate;
                 if (inputarray[index] ==48){
                     soundarray[i] = (byte) (10 * Math.sin(angle1));
                 }
@@ -379,9 +377,10 @@ public class SoundCtrl{
 
 
       } else if (userChoice==4){
+          //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
           sc.analysisAudio(8,440);
           System.out.println("Enter part 3...");
-          sc.FSK();
+          sc.FSK(440);
           sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
