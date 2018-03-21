@@ -88,12 +88,16 @@ public class SoundCtrl{
                         AudioInputStream temp1 = new AudioInputStream(temp,format,tmpbuffer.length);
                         AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out.wav"));
                         int start_index = 0;
+                        System.out.println("------------->");
                         for(int i=0;i<tmpbuffer.length;i++){
-                            if(Math.abs(tmpbuffer[i])>2){
+                            //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
+                            if(500*Math.abs(tmpbuffer[i])>3000){
                                 start_index =i;
                                 break;
                             }
                         }
+                        System.out.println("strat\t");
+                        System.out.print(start_index);
                         //int input_bit = 8;
                         //int input_sample_rate = 440;
                         int stop_index = start_index+input_bit*input_sample_rate;
@@ -102,26 +106,33 @@ public class SoundCtrl{
 
                         System.out.println("hahhahah\n");
                         for(int round =0;round<input_bit;round++) {
+                            System.out.print("\n");
                             int count = 0;
                             for (int k = start_index+round*input_sample_rate; k < start_index+round*input_sample_rate+input_sample_rate; k++) {
-                                if (Math.abs(100 * tmpbuffer[k]) <= 2) {
+                                System.out.print(500*tmpbuffer[k]+"\t");
+                                int last_node = 500*tmpbuffer[k-1]+100;
+                                int next_node = 500*tmpbuffer[k+1]+100;
+                                if (last_node *next_node < 0) {
                                     count += 1;
                                 }
+
                             }
                             count_sum+=count;
                             count_array[round]=count;
+                            System.out.println("count:");
                             System.out.print(count);
                             System.out.print("\n");
                         }
                         int threshold = count_sum/input_bit;
                         System.out.println("threshold is \n");
                         System.out.print(threshold);
+                        //System.out.print(start_index);
 
                         try {
                             File file = new File("testoutput.txt");
                             PrintStream ps = new PrintStream(new FileOutputStream(file));
                             for(int i=0;i<input_bit;i++) {
-                                if(count_array[i]>=threshold){
+                                if(count_array[i]<=threshold){
                                     ps.append("0");// 在已有的基础上添加字符串
                                 }
                                 else{
@@ -147,6 +158,8 @@ public class SoundCtrl{
             System.exit(-2);
         }
     }
+
+
 
   public  void playAudio() {
     try {
@@ -289,7 +302,7 @@ public class SoundCtrl{
             byte inputarray[] = result.getBytes();
             //System.out.print(inputarray[0]);
             byte soundarray[] = new byte[inputarray.length*input_sample_rate];
-            double frequencyOfSignal1 = 1200.0;
+            double frequencyOfSignal1 = 2000.0;
             double frequencyOfSignal2 = 12000.0;
             double samplingInterval1 = (double) (sample_rate/frequencyOfSignal1);
             double samplingInterval2 = (double) (sample_rate/frequencyOfSignal2);
@@ -297,11 +310,17 @@ public class SoundCtrl{
                 double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
                 double angle2 = (2.0 * Math.PI * i) / samplingInterval2;
                 int index = i/input_sample_rate;
+
                 if (inputarray[index] ==48){
                     soundarray[i] = (byte) (10 * Math.sin(angle1));
+                   // System.out.println(">>>>> 2000 >>>>>>\n");
+                   // System.out.print(soundarray[i]);
                 }
                 else{
+                  //  System.out.println("<<<< 12000 <<<<<<\n");
+
                     soundarray[i] = (byte) (10 * Math.sin(angle2));
+                   // System.out.print(soundarray[i]);
                 }
                 //System.out.print(soundarray[i]);
             }
@@ -313,6 +332,9 @@ public class SoundCtrl{
             txtline.write(soundarray,0,soundarray.length);
             txtline.drain();
             txtline.close();
+            ByteArrayInputStream temp = new ByteArrayInputStream(soundarray);
+            AudioInputStream temp1 = new AudioInputStream(temp,txtformat,soundarray.length);
+            AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out1.wav"));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -377,10 +399,11 @@ public class SoundCtrl{
 
 
       } else if (userChoice==4){
+          int input_sample_rate = 44;
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
-          sc.analysisAudio(8,440);
+          sc.analysisAudio(1000,input_sample_rate);
           System.out.println("Enter part 3...");
-          sc.FSK(440);
+          sc.FSK(input_sample_rate);
           sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
