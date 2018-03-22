@@ -65,18 +65,37 @@ public class SoundCtrl{
             line.open(format);
             line.start();
 
+            byte preamble[] = new byte[6*input_sample_rate];
+            double sample_rate = 44000;
+            double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
+            double frequencyOfSignal4 = 15000.0;
+
+            double samplingInterval3 = (double) (sample_rate/frequencyOfSignal3);
+            double samplingInterval4 = (double) (sample_rate/frequencyOfSignal4);
+
+            for(int i =0;i<preamble.length;i++){
+
+                double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
+                double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
+                if (i>=2*input_sample_rate && i < 4*input_sample_rate){
+                    preamble[i] = (byte)(10*Math.sin(angle3));
+                }
+                else {
+                    preamble[i] = (byte)(10*Math.sin(angle4));
+                }
+            }
 
             Runnable runner = new Runnable() {
                 int bufferSize = (int)format.getSampleRate()
                         * format.getFrameSize();
                 byte buffer[] = new byte[bufferSize];
-                int patternlength = 440;
-                byte pattern_array[] = byte[patternlength];
+                int patternlength = 6*input_sample_rate;
+
 
                 //magic parameters
-                int power=0;
-                int threshold = 0.5;
-                int prev_val = 0;
+                double power=0;
+                double threshold = 0.5;
+                double prev_val = 0;
                 public void run() {
                     out = new ByteArrayOutputStream();
                     running = true;
@@ -99,11 +118,12 @@ public class SoundCtrl{
                         System.out.println("------------->");
 
                         //looking for the starting point
+                        int inner_prod;
                         for(int i=0;i<tmpbuffer.length-patternlength;i++){
                             //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
+                            inner_prod = 0;
                             for (int k=i;k<i+patternlength;k++){
-                                int inner_prod = 0;
-                                for(int j=0;j<440;j++) inner_prod+=pattern_array[j]*tmpbuffer[k];
+                                for(int j=0;j<patternlength;j++) inner_prod+=preamble[j]*tmpbuffer[k];
                               }
 
                               power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
@@ -441,15 +461,15 @@ public class SoundCtrl{
       } else if (userChoice==4){
           int input_sample_rate = 44;
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
-          sc.analysisAudio(30,input_sample_rate);
+          //sc.analysisAudio(30,input_sample_rate);
           System.out.println("Enter part 3...");
           sc.FSK(input_sample_rate);
           //br.read();
-          sc.running = false;
+          //sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
-          System.out.println("---------Playing Start---------");
-          sc.playAudio();
+          //System.out.println("---------Playing Start---------");
+          //sc.playAudio();
 
       }
 
