@@ -64,11 +64,19 @@ public class SoundCtrl{
                     AudioSystem.getLine(info);
             line.open(format);
             line.start();
+
+
             Runnable runner = new Runnable() {
                 int bufferSize = (int)format.getSampleRate()
                         * format.getFrameSize();
                 byte buffer[] = new byte[bufferSize];
+                int patternlength = 440;
+                byte pattern_array[] = byte[patternlength];
 
+                //magic parameters
+                int power=0;
+                int threshold = 0.5;
+                int prev_val = 0;
                 public void run() {
                     out = new ByteArrayOutputStream();
                     running = true;
@@ -89,12 +97,18 @@ public class SoundCtrl{
                         AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out.wav"));
                         int start_index = 0;
                         System.out.println("------------->");
-                        for(int i=0;i<tmpbuffer.length;i++){
+
+                        //looking for the starting point
+                        for(int i=0;i<tmpbuffer.length-patternlength;i++){
                             //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
-                            if(500*Math.abs(tmpbuffer[i])>3000){
-                                start_index =i;
-                                break;
-                            }
+                            for (int k=i;k<i+patternlength;k++){
+                                int inner_prod = 0;
+                                for(int j=0;j<440;j++) inner_prod+=pattern_array[j]*tmpbuffer[k];
+                              }
+
+                              power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
+                              if(inner_prod>power && inner_prod>prev_val && inner_prod>threshold ) start_index = i;
+
                         }
                         System.out.println("strat\t");
                         System.out.print(start_index);
@@ -104,7 +118,7 @@ public class SoundCtrl{
                         int count_array[] = new int[input_bit];
                         int count_sum = 0;
 
-                        System.out.println("hahhahah\n");
+                        //System.out.println("hahhahah\n");
                         for(int round =0;round<input_bit;round++) {
                             System.out.print("\n");
                             int count = 0;
@@ -151,6 +165,7 @@ public class SoundCtrl{
                     }
                 }
             };
+
             Thread captureThread = new Thread(runner);
             captureThread.start();
         } catch (LineUnavailableException e) {
@@ -312,14 +327,14 @@ public class SoundCtrl{
                 int index = i/input_sample_rate;
 
                 if (inputarray[index] ==48){
-                    soundarray[i] = (byte) (10 * Math.sin(angle1));
+                    soundarray[i] = (byte) (100 * Math.sin(angle1));
                    // System.out.println(">>>>> 2000 >>>>>>\n");
                    // System.out.print(soundarray[i]);
                 }
                 else{
                   //  System.out.println("<<<< 12000 <<<<<<\n");
 
-                    soundarray[i] = (byte) (10 * Math.sin(angle2));
+                    soundarray[i] = (byte) (100 * Math.sin(angle2));
                    // System.out.print(soundarray[i]);
                 }
                 //System.out.print(soundarray[i]);
