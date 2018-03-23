@@ -177,20 +177,54 @@ public class SoundCtrl{
 
   public void processoffline(int num_bit,int samples_per_bit){
     try{
-      AudioInputStream bgm = AudioSystem.getAudioInputStream(new File("testout.wav"));
+      File file = new File("out-90.wav");
+      InputStream fis = new FileInputStream(file);
       int nBytesRead = 0;
 
 
-      byte[] buffer = new byte[10*num_bit*samples_per_bit];
+      byte[] buffer = new byte[88044];
 
       while (true) {
-        nBytesRead = bgm.read(buffer, 0, buffer.length);
+        nBytesRead = fis.read(buffer, 0, buffer.length);
         if (nBytesRead <= 0)
           break;
         //line.write(buffer,0,nBytesRead);
       }
+      //
+      // try {
+      //     File file0 = new File("byteoutput.txt");
+      //     PrintStream ps0 = new PrintStream(new FileOutputStream(file0));
+      //     String tmp="";
+      //   for(int i=0;i<buffer.length;i++){
+      //     tmp="";
+      //     if((int)buffer[i]!=-128) {System.out.print((int)buffer[i]);System.out.print("\n");}
+      //     tmp = Integer.toString((int)buffer[i]);
+      //     ps0.append(tmp);
+      //     ps0.append("\n");
+      //   }
+      // } catch (FileNotFoundException e) {
+      //
+      //     e.printStackTrace();
+      // }
+      int flag=0;
+      for(int i=0;i<buffer.length;i++) {
 
-      //for(int i=0;i<buffer.length;i++) if(buffer[i]!=-128)System.out.print(buffer[i]);
+
+        if(buffer[i]<0) buffer[i]+=128;
+        else buffer[i]-=128;
+        // if(buffer[i]!=0&&flag==0&&i==20794){
+        //     System.out.print(buffer[i]);
+        //     System.out.print("\n");
+        //    System.out.print(i);
+        //    System.out.print("\n");
+        //    flag=1;
+        //  }
+      //   if(buffer[i]!=-128){
+      //
+      //   //System.out.print(buffer[i]);
+      //   //System.out.print("\n");
+      // }
+      }
       decoding(num_bit,samples_per_bit,buffer);
 
   }catch (Exception e){
@@ -200,6 +234,10 @@ public class SoundCtrl{
 
  public void decoding(int num_bit,int samples_per_bit,byte[] tmpbuffer){
    byte preamble[] = new byte[6*samples_per_bit];
+
+   byte refer0[] = new byte[samples_per_bit];
+   byte refer1[] = new byte[samples_per_bit];
+
    double sample_rate = 44000;
    double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
    double frequencyOfSignal4 = 15000.0;
@@ -218,8 +256,21 @@ public class SoundCtrl{
        else {
            preamble[i] = (byte)(5*Math.sin(angle4));
        }
-       System.out.print(preamble[i]);
-       System.out.print("\n");
+       //System.out.print(preamble[i]);
+       //System.out.print("\n");
+   }
+
+   //generate reference 0 and 1
+   double samplingInterval0 = (double) (sample_rate/2000);
+   double samplingInterval1 = (double) (sample_rate/10000);
+   for(int i =0;i<samples_per_bit;i++){
+
+       double angle0 = (2.0 * Math.PI * i) / samplingInterval0;
+       double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
+       refer0[i] = (byte)(5*Math.sin(angle0));
+       refer1[i] = (byte)(5*Math.sin(angle1));
+       //System.out.print(preamble[i]);
+       //System.out.print("\n");
    }
 
    int patternlength = 6*samples_per_bit;
@@ -227,83 +278,72 @@ public class SoundCtrl{
 
    //magic parameters
    double power=0;
-   double lowerbound = 10000;
-   double prev_val = 0;
+   double lowerbound = 5000;
+   double local_max = 0;
 
    int start_index = 0;
 
      //looking for the starting point
      int inner_prod;
-     for(int i=0;i<tmpbuffer.length-patternlength;i++){
+     for(int i=44;i<tmpbuffer.length-patternlength;i++){
          //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
          inner_prod = 0;
-         for (int k=0;k<patternlength;k++){
-             inner_prod+=preamble[k]*tmpbuffer[k+i];
-           }
+           inner_prod = correlation(tmpbuffer,preamble,i,0,patternlength);
+           inner_prod = inner_prod/200*128;
 
            if(inner_prod>lowerbound){
              System.out.print("inner product--  ");
              System.out.print(inner_prod);
              System.out.print("  power--  ");
              System.out.print(power);
+             System.out.print("  index--  ");
+             System.out.print(i+patternlength);
+             System.out.print("  raw data--  ");
+             System.out.print(tmpbuffer[i+patternlength]);
              System.out.print("\n");
             }
 
-           power = power*0.5+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
-           if(inner_prod>power && inner_prod>prev_val && inner_prod>lowerbound ) {
-             start_index = i;
-             break;}
-           prev_val = power;
+           power = power/64*63+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength]/64;
+           if(inner_prod>2*power && inner_prod>local_max && inner_prod>lowerbound ) {
+               start_index = i + patternlength;
+               local_max = inner_prod;
+            }
+          if(start_index!=0&&i-start_index>patternlength) break;
+
 
      }
-     System.out.println("strat\t");
+     System.out.println("start\t");
      System.out.print(start_index);
+     System.out.print("\n");
+     System.out.print(tmpbuffer.length);
+
 
      //int input_bit = 8;
      //int input_sample_rate = 440;
      int stop_index = start_index+num_bit*samples_per_bit;
-     int count_array[] = new int[num_bit];
-     int count_sum = 0;
 
-     //System.out.println("hahhahah\n");
-     for(int round =0;round<num_bit;round++) {
-         //System.out.print("\n");
-         int count = 0;
-         for (int k = start_index+round*samples_per_bit+4; k < start_index+round*samples_per_bit+samples_per_bit-4; k++) {
-             //System.out.print(500*tmpbuffer[k]+"\t");
-             int last_node = 500*tmpbuffer[k-1]+100;
-             int next_node = 500*tmpbuffer[k]+100;
-             //System.out.print(last_node * next_node +"\t");
-             if (last_node * next_node < 0) {
-                 count += 1;
-             }
-             //System.out.print("\n");
+     try{
+     File file = new File("testoutput.txt");
+     PrintStream ps = new PrintStream(new FileOutputStream(file));
+     int inner_prod0 = 0;
+     int inner_prod1 = 0;
 
-         }
-         count_sum+=count;
-         count_array[round]=count;
-         //System.out.println("count:");
-         //System.out.print(count);
-         //System.out.print("\n");
+
+
+     for(int i=start_index;i<stop_index;i=i+samples_per_bit){
+       inner_prod0 = correlation(tmpbuffer,refer0,i+5,5,samples_per_bit-5);
+       inner_prod1 = correlation(tmpbuffer,refer1,i+5,5,samples_per_bit-5);
+       System.out.print("inner product0--  ");
+       System.out.print(inner_prod0);
+       System.out.print("inner product1--  ");
+       System.out.print(inner_prod1);
+       System.out.print("\n ");
+
+       if(inner_prod0>inner_prod1) ps.append("0");
+       else ps.append("1");
      }
-     int threshold = count_sum/num_bit;
-     //System.out.println("threshold is \n");
-     //System.out.print(threshold);
-     //System.out.print(start_index);
 
-     try {
-         File file = new File("testoutput.txt");
-         PrintStream ps = new PrintStream(new FileOutputStream(file));
-         for(int i=0;i<num_bit;i++) {
-             if(count_array[i]<=20){
-                 ps.append("0");// 在已有的基础上添加字符串
-             }
-             else{
-                 ps.append("1");// 在已有的基础上添加字符串
-             }
-         }
      } catch (FileNotFoundException e) {
-
          e.printStackTrace();
      }
 
@@ -313,7 +353,14 @@ public class SoundCtrl{
 
  }
 
-
+ public int correlation(byte[] array0,byte[] array1,int begin0,int begin1,int length){
+   int result = 0;
+   for (int i = 0; i<length;i++){
+     result+=array0[begin0+i]*array1[begin1+i];
+   }
+   if(result<0) result=~result+1;
+   return result;
+ }
 
 
 
@@ -403,7 +450,7 @@ public class SoundCtrl{
 
                       //System.out.println("hahhahah\n");
                       for(int round =0;round<input_bit;round++) {
-                          System.out.print("\n");
+                          //System.out.print("\n");
                           int count = 0;
                           for (int k = start_index+round*input_sample_rate+4; k < start_index+round*input_sample_rate+input_sample_rate-4; k++) {
                               System.out.print(500*tmpbuffer[k]+"\t");
@@ -418,13 +465,13 @@ public class SoundCtrl{
                           }
                           count_sum+=count;
                           count_array[round]=count;
-                          System.out.println("count:");
-                          System.out.print(count);
-                          System.out.print("\n");
+                          //System.out.println("count:");
+                          //System.out.print(count);
+                          //System.out.print("\n");
                       }
                       int threshold = count_sum/input_bit;
-                      System.out.println("threshold is \n");
-                      System.out.print(threshold);
+                      //System.out.println("threshold is \n");
+                      //System.out.print(threshold);
                       //System.out.print(start_index);
 
                       try {
@@ -515,6 +562,8 @@ public class SoundCtrl{
                 else{
                     soundarray[i] = (byte) (5 * Math.sin(angle2));
                 }
+                System.out.print(soundarray[i]);
+                System.out.print("----------\n");
             }
 
 
@@ -603,15 +652,15 @@ public class SoundCtrl{
       } else if (userChoice==4){
           int input_sample_rate = 44;
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
-          //sc.analysisAudio(30,input_sample_rate);
+          sc.analysisAudio(30,input_sample_rate);
           System.out.println("Enter part 3...");
           sc.FSK(input_sample_rate);
           //br.read();
-          //sc.running = false;
+          sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
           //System.out.println("---------Playing Start---------");
-          //sc.playAudio();
+          sc.playAudio();
 
       }else if(userChoice==0){
         System.out.println("--------run offline test----------");
