@@ -55,147 +55,6 @@ public class SoundCtrl{
     }
   }
 
-    public void analysisAudio(int input_bit,int input_sample_rate){
-        try {
-            final AudioFormat format = getFormat();
-            DataLine.Info info = new DataLine.Info(
-                    TargetDataLine.class, format);
-            final TargetDataLine line = (TargetDataLine)
-                    AudioSystem.getLine(info);
-            line.open(format);
-            line.start();
-
-            byte preamble[] = new byte[6*input_sample_rate];
-            double sample_rate = 44000;
-            double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
-            double frequencyOfSignal4 = 15000.0;
-
-            double samplingInterval3 = (double) (sample_rate/frequencyOfSignal3);
-            double samplingInterval4 = (double) (sample_rate/frequencyOfSignal4);
-
-            for(int i =0;i<preamble.length;i++){
-
-                double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
-                double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
-                if (i>=2*input_sample_rate && i < 4*input_sample_rate){
-                    preamble[i] = (byte)(10*Math.sin(angle3));
-                }
-                else {
-                    preamble[i] = (byte)(10*Math.sin(angle4));
-                }
-            }
-
-            Runnable runner = new Runnable() {
-                int bufferSize = (int)format.getSampleRate()
-                        * format.getFrameSize();
-                byte buffer[] = new byte[bufferSize];
-                int patternlength = 6*input_sample_rate;
-
-
-                //magic parameters
-                double power=0;
-                double threshold = 0.5;
-                double prev_val = 0;
-                public void run() {
-                    out = new ByteArrayOutputStream();
-                    running = true;
-                    try {
-                        while (running) {
-                            int count =
-                                    line.read(buffer, 0, buffer.length);
-                            if (count > 0) {
-                                out.write(buffer, 0, count);
-                            }
-                        }
-                        byte tmpbuffer[] = out.toByteArray();
-                        out.close();
-                        // analysis
-                        System.out.print(tmpbuffer.length);
-                        ByteArrayInputStream temp = new ByteArrayInputStream(tmpbuffer);
-                        AudioInputStream temp1 = new AudioInputStream(temp,format,tmpbuffer.length);
-                        AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out.wav"));
-                        int start_index = 0;
-                        System.out.println("------------->");
-
-                        //looking for the starting point
-                        int inner_prod;
-                        for(int i=0;i<tmpbuffer.length-patternlength;i++){
-                            //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
-                            inner_prod = 0;
-                            for (int k=i;k<i+patternlength;k++){
-                                for(int j=0;j<patternlength;j++) inner_prod+=preamble[j]*tmpbuffer[k];
-                              }
-
-                              power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
-                              if(inner_prod>power && inner_prod>prev_val && inner_prod>threshold ) start_index = i;
-
-                        }
-                        System.out.println("strat\t");
-                        System.out.print(start_index);
-                        //int input_bit = 8;
-                        //int input_sample_rate = 440;
-                        int stop_index = start_index+input_bit*input_sample_rate;
-                        int count_array[] = new int[input_bit];
-                        int count_sum = 0;
-
-                        //System.out.println("hahhahah\n");
-                        for(int round =0;round<input_bit;round++) {
-                            System.out.print("\n");
-                            int count = 0;
-                            for (int k = start_index+round*input_sample_rate+4; k < start_index+round*input_sample_rate+input_sample_rate-4; k++) {
-                                System.out.print(500*tmpbuffer[k]+"\t");
-                                int last_node = 500*tmpbuffer[k-1]+100;
-                                int next_node = 500*tmpbuffer[k]+100;
-                                //System.out.print(last_node * next_node +"\t");
-                                if (last_node * next_node < 0) {
-                                    count += 1;
-                                }
-                                //System.out.print("\n");
-
-                            }
-                            count_sum+=count;
-                            count_array[round]=count;
-                            System.out.println("count:");
-                            System.out.print(count);
-                            System.out.print("\n");
-                        }
-                        int threshold = count_sum/input_bit;
-                        System.out.println("threshold is \n");
-                        System.out.print(threshold);
-                        //System.out.print(start_index);
-
-                        try {
-                            File file = new File("testoutput.txt");
-                            PrintStream ps = new PrintStream(new FileOutputStream(file));
-                            for(int i=0;i<input_bit;i++) {
-                                if(count_array[i]<=20){
-                                    ps.append("0");// 在已有的基础上添加字符串
-                                }
-                                else{
-                                    ps.append("1");// 在已有的基础上添加字符串
-                                }
-                            }
-                        } catch (FileNotFoundException e) {
-
-                            e.printStackTrace();
-                        }
-
-                        // end of analysis
-                    } catch (IOException e) {
-                        System.err.println("I/O problems: " + e);
-                        System.exit(-1);
-                    }
-                }
-            };
-
-            Thread captureThread = new Thread(runner);
-            captureThread.start();
-        } catch (LineUnavailableException e) {
-            System.err.println("Line unavailable: " + e);
-            System.exit(-2);
-        }
-    }
-
 
 
   public  void playAudio() {
@@ -314,10 +173,273 @@ public class SoundCtrl{
     }catch (Exception e){
       e.printStackTrace();
     }
-
-
-
   }
+
+  public void processoffline(int num_bit,int samples_per_bit){
+    try{
+    AudioInputStream bgm = AudioSystem.getAudioInputStream(new File("out.wav"));
+    AudioFormat format = bgm.getFormat();
+    int nBytesRead = 0;
+    byte[] tmpbuffer = new byte[num_bit*samples_per_bit];
+
+    bgm.read(tmpbuffer, 0, tmpbuffer.length);
+
+    decoding(num_bit,samples_per_bit,tmpbuffer);
+
+  }catch (Exception e){
+    e.printStackTrace();
+  }
+}
+
+ public void decoding(int num_bit,int samples_per_bit,byte[] tmpbuffer){
+   byte preamble[] = new byte[6*samples_per_bit];
+   double sample_rate = 44000;
+   double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
+   double frequencyOfSignal4 = 15000.0;
+
+   double samplingInterval3 = (double) (sample_rate/frequencyOfSignal3);
+   double samplingInterval4 = (double) (sample_rate/frequencyOfSignal4);
+
+   //generate a spacial pattern for synchornization
+   for(int i =0;i<preamble.length;i++){
+
+       double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
+       double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
+       if (i>=2*samples_per_bit && i < 4*samples_per_bit){
+           preamble[i] = (byte)(10*Math.sin(angle3));
+       }
+       else {
+           preamble[i] = (byte)(10*Math.sin(angle4));
+       }
+   }
+
+   int patternlength = 6*samples_per_bit;
+
+
+   //magic parameters
+   double power=0;
+   double lowerbound = 0.5;
+   double prev_val = 0;
+
+   int start_index = 0;
+
+     //looking for the starting point
+     int inner_prod;
+     for(int i=0;i<tmpbuffer.length-patternlength;i++){
+         //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
+         inner_prod = 0;
+         for (int k=i;k<i+patternlength;k++){
+             for(int j=0;j<patternlength;j++) inner_prod+=preamble[j]*tmpbuffer[k];
+           }
+
+           power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
+           if(inner_prod>power && inner_prod>prev_val && inner_prod>lowerbound ) start_index = i;
+           prev_val = power;
+
+     }
+     System.out.println("strat\t");
+     System.out.print(start_index);
+     //int input_bit = 8;
+     //int input_sample_rate = 440;
+     int stop_index = start_index+num_bit*samples_per_bit;
+     int count_array[] = new int[num_bit];
+     int count_sum = 0;
+
+     //System.out.println("hahhahah\n");
+     for(int round =0;round<num_bit;round++) {
+         System.out.print("\n");
+         int count = 0;
+         for (int k = start_index+round*samples_per_bit+4; k < start_index+round*samples_per_bit+samples_per_bit-4; k++) {
+             System.out.print(500*tmpbuffer[k]+"\t");
+             int last_node = 500*tmpbuffer[k-1]+100;
+             int next_node = 500*tmpbuffer[k]+100;
+             //System.out.print(last_node * next_node +"\t");
+             if (last_node * next_node < 0) {
+                 count += 1;
+             }
+             //System.out.print("\n");
+
+         }
+         count_sum+=count;
+         count_array[round]=count;
+         System.out.println("count:");
+         System.out.print(count);
+         System.out.print("\n");
+     }
+     int threshold = count_sum/num_bit;
+     System.out.println("threshold is \n");
+     System.out.print(threshold);
+     //System.out.print(start_index);
+
+     try {
+         File file = new File("testoutput.txt");
+         PrintStream ps = new PrintStream(new FileOutputStream(file));
+         for(int i=0;i<num_bit;i++) {
+             if(count_array[i]<=20){
+                 ps.append("0");// 在已有的基础上添加字符串
+             }
+             else{
+                 ps.append("1");// 在已有的基础上添加字符串
+             }
+         }
+     } catch (FileNotFoundException e) {
+
+         e.printStackTrace();
+     }
+
+     // end of analysis
+
+
+
+ }
+
+
+
+
+
+  public void analysisAudio(int input_bit,int input_sample_rate){
+      try {
+          final AudioFormat format = getFormat();
+          DataLine.Info info = new DataLine.Info(
+                  TargetDataLine.class, format);
+          final TargetDataLine line = (TargetDataLine)
+                  AudioSystem.getLine(info);
+          line.open(format);
+          line.start();
+
+          byte preamble[] = new byte[6*input_sample_rate];
+          double sample_rate = 44000;
+          double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
+          double frequencyOfSignal4 = 15000.0;
+
+          double samplingInterval3 = (double) (sample_rate/frequencyOfSignal3);
+          double samplingInterval4 = (double) (sample_rate/frequencyOfSignal4);
+
+          for(int i =0;i<preamble.length;i++){
+
+              double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
+              double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
+              if (i>=2*input_sample_rate && i < 4*input_sample_rate){
+                  preamble[i] = (byte)(10*Math.sin(angle3));
+              }
+              else {
+                  preamble[i] = (byte)(10*Math.sin(angle4));
+              }
+          }
+
+          Runnable runner = new Runnable() {
+              int bufferSize = (int)format.getSampleRate()
+                      * format.getFrameSize();
+              byte buffer[] = new byte[bufferSize];
+              int patternlength = 6*input_sample_rate;
+
+
+              //magic parameters
+              double power=0;
+              double threshold = 0.5;
+              double prev_val = 0;
+              public void run() {
+                  out = new ByteArrayOutputStream();
+                  running = true;
+                  try {
+                      while (running) {
+                          int count =
+                                  line.read(buffer, 0, buffer.length);
+                          if (count > 0) {
+                              out.write(buffer, 0, count);
+                          }
+                      }
+                      byte tmpbuffer[] = out.toByteArray();
+                      out.close();
+                      // analysis
+                      System.out.print(tmpbuffer.length);
+                      ByteArrayInputStream temp = new ByteArrayInputStream(tmpbuffer);
+                      AudioInputStream temp1 = new AudioInputStream(temp,format,tmpbuffer.length);
+                      AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out.wav"));
+                      int start_index = 0;
+                      System.out.println("------------->");
+
+                      //looking for the starting point
+                      int inner_prod;
+                      for(int i=0;i<tmpbuffer.length-patternlength;i++){
+                          //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
+                          inner_prod = 0;
+                          for (int k=i;k<i+patternlength;k++){
+                              for(int j=0;j<patternlength;j++) inner_prod+=preamble[j]*tmpbuffer[k];
+                            }
+
+                            power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
+                            if(inner_prod>power && inner_prod>prev_val && inner_prod>threshold ) start_index = i;
+                            prev_val = power;
+
+                      }
+                      System.out.println("strat\t");
+                      System.out.print(start_index);
+                      //int input_bit = 8;
+                      //int input_sample_rate = 440;
+                      int stop_index = start_index+input_bit*input_sample_rate;
+                      int count_array[] = new int[input_bit];
+                      int count_sum = 0;
+
+                      //System.out.println("hahhahah\n");
+                      for(int round =0;round<input_bit;round++) {
+                          System.out.print("\n");
+                          int count = 0;
+                          for (int k = start_index+round*input_sample_rate+4; k < start_index+round*input_sample_rate+input_sample_rate-4; k++) {
+                              System.out.print(500*tmpbuffer[k]+"\t");
+                              int last_node = 500*tmpbuffer[k-1]+100;
+                              int next_node = 500*tmpbuffer[k]+100;
+                              //System.out.print(last_node * next_node +"\t");
+                              if (last_node * next_node < 0) {
+                                  count += 1;
+                              }
+                              //System.out.print("\n");
+
+                          }
+                          count_sum+=count;
+                          count_array[round]=count;
+                          System.out.println("count:");
+                          System.out.print(count);
+                          System.out.print("\n");
+                      }
+                      int threshold = count_sum/input_bit;
+                      System.out.println("threshold is \n");
+                      System.out.print(threshold);
+                      //System.out.print(start_index);
+
+                      try {
+                          File file = new File("testoutput.txt");
+                          PrintStream ps = new PrintStream(new FileOutputStream(file));
+                          for(int i=0;i<input_bit;i++) {
+                              if(count_array[i]<=20){
+                                  ps.append("0");// 在已有的基础上添加字符串
+                              }
+                              else{
+                                  ps.append("1");// 在已有的基础上添加字符串
+                              }
+                          }
+                      } catch (FileNotFoundException e) {
+
+                          e.printStackTrace();
+                      }
+
+                      // end of analysis
+                  } catch (IOException e) {
+                      System.err.println("I/O problems: " + e);
+                      System.exit(-1);
+                  }
+              }
+          };
+
+          Thread captureThread = new Thread(runner);
+          captureThread.start();
+      } catch (LineUnavailableException e) {
+          System.err.println("Line unavailable: " + e);
+          System.exit(-2);
+      }
+  }
+
+
     public void FSK(int input_sample_rate){
 
         try {
@@ -357,10 +479,10 @@ public class SoundCtrl{
                 double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
                 double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
                 if (i>=2*input_sample_rate && i < 4*input_sample_rate){
-                    preamble[i] = (byte)(10*Math.sin(angle3));
+                    preamble[i] = (byte)(5*Math.sin(angle3));
                 }
                 else {
-                    preamble[i] = (byte)(10*Math.sin(angle4));
+                    preamble[i] = (byte)(5*Math.sin(angle4));
                 }
             }
             for(int i = 0;i<soundarray.length;i++){
@@ -470,6 +592,10 @@ public class SoundCtrl{
           br.read();
           //System.out.println("---------Playing Start---------");
           //sc.playAudio();
+
+      }else if(userChoice==0){
+        System.out.println("--------run offline test----------");
+        sc.processoffline(90,44);
 
       }
 
