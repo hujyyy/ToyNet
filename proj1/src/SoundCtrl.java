@@ -177,14 +177,21 @@ public class SoundCtrl{
 
   public void processoffline(int num_bit,int samples_per_bit){
     try{
-    AudioInputStream bgm = AudioSystem.getAudioInputStream(new File("out.wav"));
-    AudioFormat format = bgm.getFormat();
-    int nBytesRead = 0;
-    byte[] tmpbuffer = new byte[num_bit*samples_per_bit];
+      AudioInputStream bgm = AudioSystem.getAudioInputStream(new File("testout.wav"));
+      int nBytesRead = 0;
 
-    bgm.read(tmpbuffer, 0, tmpbuffer.length);
 
-    decoding(num_bit,samples_per_bit,tmpbuffer);
+      byte[] buffer = new byte[10*num_bit*samples_per_bit];
+
+      while (true) {
+        nBytesRead = bgm.read(buffer, 0, buffer.length);
+        if (nBytesRead <= 0)
+          break;
+        //line.write(buffer,0,nBytesRead);
+      }
+
+      //for(int i=0;i<buffer.length;i++) if(buffer[i]!=-128)System.out.print(buffer[i]);
+      decoding(num_bit,samples_per_bit,buffer);
 
   }catch (Exception e){
     e.printStackTrace();
@@ -206,11 +213,13 @@ public class SoundCtrl{
        double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
        double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
        if (i>=2*samples_per_bit && i < 4*samples_per_bit){
-           preamble[i] = (byte)(10*Math.sin(angle3));
+           preamble[i] = (byte)(5*Math.sin(angle3));
        }
        else {
-           preamble[i] = (byte)(10*Math.sin(angle4));
+           preamble[i] = (byte)(5*Math.sin(angle4));
        }
+       System.out.print(preamble[i]);
+       System.out.print("\n");
    }
 
    int patternlength = 6*samples_per_bit;
@@ -218,7 +227,7 @@ public class SoundCtrl{
 
    //magic parameters
    double power=0;
-   double lowerbound = 0.5;
+   double lowerbound = 10000;
    double prev_val = 0;
 
    int start_index = 0;
@@ -228,17 +237,28 @@ public class SoundCtrl{
      for(int i=0;i<tmpbuffer.length-patternlength;i++){
          //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
          inner_prod = 0;
-         for (int k=i;k<i+patternlength;k++){
-             for(int j=0;j<patternlength;j++) inner_prod+=preamble[j]*tmpbuffer[k];
+         for (int k=0;k<patternlength;k++){
+             inner_prod+=preamble[k]*tmpbuffer[k+i];
            }
 
-           power = power*0.9+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
-           if(inner_prod>power && inner_prod>prev_val && inner_prod>lowerbound ) start_index = i;
+           if(inner_prod>lowerbound){
+             System.out.print("inner product--  ");
+             System.out.print(inner_prod);
+             System.out.print("  power--  ");
+             System.out.print(power);
+             System.out.print("\n");
+            }
+
+           power = power*0.5+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength];
+           if(inner_prod>power && inner_prod>prev_val && inner_prod>lowerbound ) {
+             start_index = i;
+             break;}
            prev_val = power;
 
      }
      System.out.println("strat\t");
      System.out.print(start_index);
+
      //int input_bit = 8;
      //int input_sample_rate = 440;
      int stop_index = start_index+num_bit*samples_per_bit;
@@ -247,10 +267,10 @@ public class SoundCtrl{
 
      //System.out.println("hahhahah\n");
      for(int round =0;round<num_bit;round++) {
-         System.out.print("\n");
+         //System.out.print("\n");
          int count = 0;
          for (int k = start_index+round*samples_per_bit+4; k < start_index+round*samples_per_bit+samples_per_bit-4; k++) {
-             System.out.print(500*tmpbuffer[k]+"\t");
+             //System.out.print(500*tmpbuffer[k]+"\t");
              int last_node = 500*tmpbuffer[k-1]+100;
              int next_node = 500*tmpbuffer[k]+100;
              //System.out.print(last_node * next_node +"\t");
@@ -262,13 +282,13 @@ public class SoundCtrl{
          }
          count_sum+=count;
          count_array[round]=count;
-         System.out.println("count:");
-         System.out.print(count);
-         System.out.print("\n");
+         //System.out.println("count:");
+         //System.out.print(count);
+         //System.out.print("\n");
      }
      int threshold = count_sum/num_bit;
-     System.out.println("threshold is \n");
-     System.out.print(threshold);
+     //System.out.println("threshold is \n");
+     //System.out.print(threshold);
      //System.out.print(start_index);
 
      try {
@@ -320,10 +340,10 @@ public class SoundCtrl{
               double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
               double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
               if (i>=2*input_sample_rate && i < 4*input_sample_rate){
-                  preamble[i] = (byte)(10*Math.sin(angle3));
+                  preamble[i] = (byte)(5*Math.sin(angle3));
               }
               else {
-                  preamble[i] = (byte)(10*Math.sin(angle4));
+                  preamble[i] = (byte)(5*Math.sin(angle4));
               }
           }
 
@@ -490,10 +510,10 @@ public class SoundCtrl{
                 double angle2 = (2.0 * Math.PI * i) / samplingInterval2;
                 int index = i/input_sample_rate;
                 if (inputarray[index] ==48){
-                    soundarray[i] = (byte) (10 * Math.sin(angle1));
+                    soundarray[i] = (byte) (5 * Math.sin(angle1));
                 }
                 else{
-                    soundarray[i] = (byte) (10 * Math.sin(angle2));
+                    soundarray[i] = (byte) (5 * Math.sin(angle2));
                 }
             }
 
