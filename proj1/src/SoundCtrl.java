@@ -210,14 +210,15 @@ public class SoundCtrl{
       //   //System.out.print("\n");
       // }
       }
-      decoding(num_bit,samples_per_bit,buffer);
+      decoding(1,num_bit,samples_per_bit,buffer);
 
   }catch (Exception e){
     e.printStackTrace();
   }
 }
 
- public void decoding(int num_bit,int samples_per_bit,byte[] tmpbuffer){
+ public void decoding(int num_pack,int num_bit,int samples_per_bit,byte[] tmpbuffer){
+   int scale = 100;
    byte preamble[] = new byte[6*samples_per_bit];
 
    byte refer0[] = new byte[samples_per_bit];
@@ -236,10 +237,10 @@ public class SoundCtrl{
        double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
        double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
        if (i>=2*samples_per_bit && i < 4*samples_per_bit){
-           preamble[i] = (byte)(5*Math.sin(angle3));
+           preamble[i] = (byte)(scale*Math.sin(angle3));
        }
        else {
-           preamble[i] = (byte)(5*Math.sin(angle4));
+           preamble[i] = (byte)(scale*Math.sin(angle4));
        }
        //System.out.print(preamble[i]);
        //System.out.print("\n");
@@ -252,88 +253,95 @@ public class SoundCtrl{
 
        double angle0 = (2.0 * Math.PI * i) / samplingInterval0;
        double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
-       refer0[i] = (byte)(5*Math.sin(angle0));
-       refer1[i] = (byte)(5*Math.sin(angle1));
+       refer0[i] = (byte)(scale*Math.sin(angle0));
+       refer1[i] = (byte)(scale*Math.sin(angle1));
        //System.out.print(preamble[i]);
        //System.out.print("\n");
    }
 
    int patternlength = 6*samples_per_bit;
-
+   int breaktime = 22000;
 
    //magic parameters
    double power=0;
-   double lowerbound = 500;
+   //double lowerbound = 5000;
+   double lowerbound = 300*scale;
    double local_max = 0;
 
-   int start_index = 0;
+   int pack_head = 0;
+   int packlength = num_bit/num_pack*samples_per_bit;
 
      //looking for the starting point
      int inner_prod;
-     for(int i=44;i<tmpbuffer.length-patternlength;i++){
-         //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
-         inner_prod = 0;
-           inner_prod = correlation(tmpbuffer,preamble,i,0,patternlength);
-           inner_prod = inner_prod/200*128;
-
-           if(inner_prod>lowerbound){
-             System.out.print("inner product--  ");
-             System.out.print(inner_prod);
-             System.out.print("  power--  ");
-             System.out.print(power);
-             System.out.print("  index--  ");
-             System.out.print(i+patternlength);
-             System.out.print("  raw data--  ");
-             System.out.print(tmpbuffer[i+patternlength]);
-             System.out.print("\n");
-            }
-
-           power = power/64*63+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength]/64;
-           if(inner_prod>2*power && inner_prod>local_max && inner_prod>lowerbound ) {
-               start_index = i + patternlength;
-               local_max = inner_prod;
-            }
-          if(start_index!=0&&i-start_index>patternlength) break;
-
-
-     }
-     System.out.println("start\t");
-     System.out.print(start_index);
-     System.out.print("\n");
-     System.out.print(tmpbuffer.length);
-
-
-     //int input_bit = 8;
-     //int input_sample_rate = 440;
-     int stop_index = start_index+num_bit*samples_per_bit;
+     int start_index=0;
 
      try{
      File file = new File("testoutput.txt");
      PrintStream ps = new PrintStream(new FileOutputStream(file));
-     int inner_prod0 = 0;
-     int inner_prod1 = 0;
+
+     for(int k=0;k<num_pack;k++){
+
+           for(int i=pack_head;i<breaktime+2*patternlength;i++){
+               //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
+               inner_prod = 0;
+                 inner_prod = correlation(tmpbuffer,preamble,i,0,patternlength);
+                 inner_prod = inner_prod/200*128;
+
+                 if(inner_prod>lowerbound){
+                   System.out.print("inner product--  ");
+                   System.out.print(inner_prod);
+                   System.out.print("  power--  ");
+                   System.out.print(power);
+                   System.out.print("  index--  ");
+                   System.out.print(i+patternlength);
+                   System.out.print("  raw data--  ");
+                   System.out.print(tmpbuffer[i+patternlength]);
+                   System.out.print("\n");
+                  }
+
+                 power = power/64*63+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength]/64;
+                 if(inner_prod>2*power && inner_prod>local_max && inner_prod>lowerbound ) {
+                     start_index = i + patternlength;
+                     local_max = inner_prod;
+                  }
+                if(start_index!=0&&i-start_index>patternlength) break;
+
+
+           }
+           System.out.println("start\t");
+           System.out.print(start_index);
+           System.out.print("\n");
+           System.out.print(tmpbuffer.length);
+
+
+           //int input_bit = 8;
+           //int input_sample_rate = 440;
+           int stop_index = start_index+packlength;
+           pack_head = stop_index + 1;
+
+
+           int inner_prod0 = 0;
+           int inner_prod1 = 0;
 
 
 
-     for(int i=start_index;i<stop_index;i=i+samples_per_bit){
-       inner_prod0 = correlation(tmpbuffer,refer0,i+5,5,samples_per_bit-5);
-       inner_prod1 = correlation(tmpbuffer,refer1,i+5,5,samples_per_bit-5);
-       System.out.print("inner product0--  ");
-       System.out.print(inner_prod0);
-       System.out.print("inner product1--  ");
-       System.out.print(inner_prod1);
-       System.out.print("\n ");
+           for(int i=start_index;i<stop_index;i=i+samples_per_bit){
+             inner_prod0 = correlation(tmpbuffer,refer0,i+5,5,samples_per_bit-5);
+             inner_prod1 = correlation(tmpbuffer,refer1,i+5,5,samples_per_bit-5);
+             // System.out.print("inner product0--  ");
+             // System.out.print(inner_prod0);
+             // System.out.print("inner product1--  ");
+             // System.out.print(inner_prod1);
+             // System.out.print("\n ");
 
-       if(inner_prod0>inner_prod1) ps.append("0");
-       else ps.append("1");
-     }
+             if(inner_prod0>inner_prod1) ps.append("0");
+             else ps.append("1");
+           }
+         }
 
-     } catch (FileNotFoundException e) {
-         e.printStackTrace();
-     }
+     }catch (FileNotFoundException e) {e.printStackTrace();}
 
      // end of analysis
-
 
 
  }
@@ -350,7 +358,7 @@ public class SoundCtrl{
 
 
 
-  public void analysisAudio(int input_bit,int input_sample_rate){
+  public void analysisAudio(int num_pack,int input_bit,int input_sample_rate){
       try {
           final AudioFormat format = getFormat();
           DataLine.Info info = new DataLine.Info(
@@ -381,8 +389,7 @@ public class SoundCtrl{
           // }
 
           Runnable runner = new Runnable() {
-              int bufferSize = (int)format.getSampleRate()
-                      * format.getFrameSize();
+              int bufferSize = 100000;
               byte buffer[] = new byte[bufferSize];
               int patternlength = 6*input_sample_rate;
 
@@ -412,7 +419,8 @@ public class SoundCtrl{
 
                       System.out.println("------------->");
 
-                      decoding(input_bit,input_sample_rate,tmpbuffer);
+                      //for(int i=0;i<tmpbuffer.length;i++) if(tmpbuffer[i]>1) System.out.print(10*tmpbuffer[i]+"\n");
+                      decoding(num_pack,input_bit,input_sample_rate,tmpbuffer);
 
                   //     //looking for the starting point
                   //     int inner_prod;
@@ -495,8 +503,8 @@ public class SoundCtrl{
   }
 
 
-    public void FSK(int input_sample_rate){
-
+    public void FSK(int num_pack,int input_sample_rate){
+      int scale = 100;
         try {
 
             /* 读入TXT文件 */
@@ -514,13 +522,15 @@ public class SoundCtrl{
             }
             int sample_rate = 44000;
             int bit_input_number = result.length();
+            int breaktime = sample_rate/2;
+            int patternlength = 6*input_sample_rate;
 
             byte inputarray[] = result.getBytes();
             //System.out.print(inputarray[0]);
-            byte soundarray[] = new byte[inputarray.length*input_sample_rate];
+            byte soundarray[] = new byte[inputarray.length*input_sample_rate+num_pack*patternlength+(num_pack-1)*breaktime];
             double frequencyOfSignal1 = 2000.0;
             double frequencyOfSignal2 = 10000.0;
-            byte preamble[] = new byte[6*input_sample_rate];
+            byte preamble[] = new byte[patternlength];
             double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
             double frequencyOfSignal4 = 15000.0;
             double samplingInterval1 = (double) (sample_rate/frequencyOfSignal1);
@@ -534,46 +544,68 @@ public class SoundCtrl{
                 double angle3 = (2.0 * Math.PI * i) / samplingInterval3;
                 double angle4 = (2.0 * Math.PI * i) / samplingInterval4;
                 if (i>=2*input_sample_rate && i < 4*input_sample_rate){
-                    preamble[i] = (byte)(5*Math.sin(angle3));
+                    preamble[i] = (byte)(scale*Math.sin(angle3));
                 }
                 else {
-                    preamble[i] = (byte)(5*Math.sin(angle4));
+                    preamble[i] = (byte)(scale*Math.sin(angle4));
                 }
             }
-            for(int i = 0;i<soundarray.length;i++){
-                double angle1 = (2.0 * Math.PI * i) / samplingInterval1;
-                double angle2 = (2.0 * Math.PI * i) / samplingInterval2;
-                int index = i/input_sample_rate;
-                if (inputarray[index] ==48){
-                    soundarray[i] = (byte) (5 * Math.sin(angle1));
+
+            int index = 0;
+            int input_index = 0;
+            int bits_per_pack = inputarray.length / num_pack;
+
+            //loop to generate packs
+            System.out.print(soundarray.length+"  "+index+"\n");
+            for(int j = 0;j<num_pack;j++){
+
+              //add preamble
+              for(int k=0;k<patternlength;k++) soundarray[index++] = (byte)preamble[k];
+
+
+              //modulation
+              for(int i = 0;i<bits_per_pack;i++){
+                if (inputarray [input_index] ==48){
+                  System.out.print(index+"\n");
+                    for (int k = 0;k<input_sample_rate;k++){
+                      double angle1 = (2.0 * Math.PI * k) / samplingInterval1;
+                      soundarray[index++] = (byte) (scale * Math.sin(angle1));
+                      //System.out.print(k+"hhhh\n");
+                    }
+                }else{
+                  for (int k = 0;k<input_sample_rate;k++){
+                    double angle2 = (2.0 * Math.PI * k) / samplingInterval2;
+                    soundarray[index++] = (byte) (scale * Math.sin(angle2));
                 }
-                else{
-                    soundarray[i] = (byte) (5 * Math.sin(angle2));
-                }
-                System.out.print(soundarray[i]);
-                System.out.print("----------\n");
+
+              }
+              input_index++;
             }
 
+            //add break time , prevent some echo hopefully
+            if(j!=num_pack-1) for(int k=0;k<breaktime;k++) soundarray[index++]=(byte)0;
+        }
 
-            byte out_array[] = new byte[preamble.length+soundarray.length];
-
-            for(int x=0;x<preamble.length;x++){
-                out_array[x] = preamble[x];
-            }
-            for(int y=0;y<soundarray.length;y++){
-                out_array[preamble.length+y]=soundarray[y];
-            }
+        System.out.print(soundarray.length+"  "+index+"\n");
+            // byte out_array[] = new byte[preamble.length+soundarray.length];
+            //
+            // for(int x=0;x<preamble.length;x++){
+            //     out_array[x] = preamble[x];
+            // }
+            // for(int y=0;y<soundarray.length;y++){
+            //     out_array[preamble.length+y]=soundarray[y];
+            // }
 
             final AudioFormat txtformat = new AudioFormat(44000, 8, 1, true, true);
             SourceDataLine txtline = AudioSystem.getSourceDataLine(txtformat);
             txtline.open(txtformat);
             txtline.start();
-            txtline.write(out_array,0,out_array.length);
+            txtline.write(soundarray,0,soundarray.length);
             txtline.drain();
             txtline.close();
-            ByteArrayInputStream temp = new ByteArrayInputStream(out_array);
-            AudioInputStream temp1 = new AudioInputStream(temp,txtformat,out_array.length);
-            AudioSystem.write(temp1,AudioFileFormat.Type.WAVE,new File("out1.wav"));
+            ByteArrayInputStream temp = new ByteArrayInputStream(soundarray);
+            AudioInputStream aud = new AudioInputStream(temp,txtformat,soundarray.length);
+            AudioSystem.write(aud,AudioFileFormat.Type.WAVE,new File("out1.wav"));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -640,19 +672,19 @@ public class SoundCtrl{
       } else if (userChoice==4){
           int input_sample_rate = 44;
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
-          sc.analysisAudio(90,input_sample_rate);
+          sc.analysisAudio(5,10000,input_sample_rate);
           System.out.println("Enter part 3...");
-          sc.FSK(input_sample_rate);
-          //br.read();
+          sc.FSK(5,input_sample_rate);
+          br.read();
           sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
-          //System.out.println("---------Playing Start---------");
+          System.out.println("---------Playing Start---------");
           sc.playAudio();
 
       }else if(userChoice==0){
         System.out.println("--------run offline test----------");
-        sc.processoffline(90,44);
+        sc.processoffline(1000,44);
 
       }
       else if(userChoice==5){
