@@ -218,7 +218,7 @@ public class SoundCtrl{
 }
 
  public void decoding(int num_pack,int num_bit,int samples_per_bit,byte[] tmpbuffer){
-   int scale = 100;
+   int scale = 50;
    byte preamble[] = new byte[6*samples_per_bit];
 
    byte refer0[] = new byte[samples_per_bit];
@@ -260,12 +260,12 @@ public class SoundCtrl{
    }
 
    int patternlength = 6*samples_per_bit;
-   int breaktime = 22000;
+   int breaktime = 8800;
 
    //magic parameters
    double power=0;
    //double lowerbound = 5000;
-   double lowerbound = 300*scale;
+   double lowerbound = 100*scale;
    double local_max = 0;
 
    int pack_head = 0;
@@ -281,44 +281,44 @@ public class SoundCtrl{
 
      for(int k=0;k<num_pack;k++){
 
-           for(int i=pack_head;i<breaktime+2*patternlength;i++){
+           for(int i=pack_head;i<tmpbuffer.length;i++){
                //System.out.print(1000*Math.abs(tmpbuffer[i])+"e \t");
                inner_prod = 0;
                  inner_prod = correlation(tmpbuffer,preamble,i,0,patternlength);
                  inner_prod = inner_prod/200*128;
 
-                 if(inner_prod>lowerbound){
-                   System.out.print("inner product--  ");
-                   System.out.print(inner_prod);
-                   System.out.print("  power--  ");
-                   System.out.print(power);
-                   System.out.print("  index--  ");
-                   System.out.print(i+patternlength);
-                   System.out.print("  raw data--  ");
-                   System.out.print(tmpbuffer[i+patternlength]);
-                   System.out.print("\n");
-                  }
+//                 if(i>pack_head+breaktime){
+//                   System.out.print("inner product--  ");
+//                   System.out.print(inner_prod);
+//                   System.out.print("  power--  ");
+//                   System.out.print(power);
+//                   System.out.print("  index--  ");
+//                   System.out.print(i+patternlength);
+//                   System.out.print("  raw data--  ");
+//                   System.out.print(tmpbuffer[i+patternlength]);
+//                   System.out.print("\n");
+//                  }
 
                  power = power/64*63+tmpbuffer[i+patternlength]*tmpbuffer[i+patternlength]/64;
                  if(inner_prod>2*power && inner_prod>local_max && inner_prod>lowerbound ) {
                      start_index = i + patternlength;
                      local_max = inner_prod;
                   }
-                if(start_index!=0&&i-start_index>patternlength) break;
+                if(start_index!=pack_head&&i-start_index>patternlength) {System.out.print("break");break;}
 
 
            }
-           System.out.println("start\t");
-           System.out.print(start_index);
-           System.out.print("\n");
-           System.out.print(tmpbuffer.length);
+           local_max = 0;
+           System.out.println("start "+start_index);
+
+           System.out.print("bufferlength "+tmpbuffer.length);
 
 
            //int input_bit = 8;
            //int input_sample_rate = 440;
            int stop_index = start_index+packlength;
-           pack_head = stop_index + 1;
-
+           pack_head = stop_index ;
+            System.out.print("stop_index "+stop_index);
 
            int inner_prod0 = 0;
            int inner_prod1 = 0;
@@ -337,6 +337,7 @@ public class SoundCtrl{
              if(inner_prod0>inner_prod1) ps.append("0");
              else ps.append("1");
            }
+           start_index = stop_index;
          }
 
      }catch (FileNotFoundException e) {e.printStackTrace();}
@@ -522,7 +523,7 @@ public class SoundCtrl{
             }
             int sample_rate = 44000;
             int bit_input_number = result.length();
-            int breaktime = sample_rate/2;
+            int breaktime = sample_rate/5;
             int patternlength = 6*input_sample_rate;
 
             byte inputarray[] = result.getBytes();
@@ -675,7 +676,7 @@ public class SoundCtrl{
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
           //sc.analysisAudio(5,10000,input_sample_rate);
           System.out.println("Enter part 3...");
-          sc.FSK(5,input_sample_rate);
+          sc.FSK(10,input_sample_rate);
           br.read();
           //sc.running = false;
           System.out.println("Press Enter to start playing...");
@@ -684,13 +685,15 @@ public class SoundCtrl{
           sc.playAudio();
 
       }else if(userChoice==5){
-        sc.analysisAudio(5,10000,input_sample_rate);
-        System.out.println("Press Enter to start playing...");
+        sc.analysisAudio(10,10000,input_sample_rate);
+
         br.read();
         sc.running = false;
-        System.out.println("---------Playing Start---------");
-        sc.playAudio();
 
+        System.out.println("Press Enter to start playing...");
+
+        br.read();
+        sc.playAudio();
       }else if(userChoice==0){
         System.out.println("--------run offline test----------");
         sc.processoffline(1000,44);
