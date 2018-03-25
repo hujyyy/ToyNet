@@ -504,7 +504,7 @@ public class SoundCtrl{
 
 
     public void FSK(int num_pack,int input_sample_rate){
-      int scale = 100;
+      int scale = 50;
         try {
 
             /* 读入TXT文件 */
@@ -566,7 +566,7 @@ public class SoundCtrl{
               //modulation
               for(int i = 0;i<bits_per_pack;i++){
                 if (inputarray [input_index] ==48){
-                  System.out.print(index+"\n");
+                  //System.out.print(index+"\n");
                     for (int k = 0;k<input_sample_rate;k++){
                       double angle1 = (2.0 * Math.PI * k) / samplingInterval1;
                       soundarray[index++] = (byte) (scale * Math.sin(angle1));
@@ -621,6 +621,8 @@ public class SoundCtrl{
 
     System.out.println("---------Program Start---------");
     boolean ProgramRun=true;
+    int input_sample_rate = 44;
+
     while (ProgramRun) {
       System.out.println("Choose one mood (1,2,3) ---> 1(Part1-1) 2(Part1-2) 3(part2) 4(read)...");
       Scanner scan = new Scanner(System.in);
@@ -670,24 +672,31 @@ public class SoundCtrl{
 
 
       } else if (userChoice==4){
-          int input_sample_rate = 44;
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
-          sc.analysisAudio(5,10000,input_sample_rate);
+          //sc.analysisAudio(5,10000,input_sample_rate);
           System.out.println("Enter part 3...");
           sc.FSK(5,input_sample_rate);
           br.read();
-          sc.running = false;
+          //sc.running = false;
           System.out.println("Press Enter to start playing...");
           br.read();
           System.out.println("---------Playing Start---------");
           sc.playAudio();
+
+      }else if(userChoice==5){
+        sc.analysisAudio(5,10000,input_sample_rate);
+        System.out.println("Press Enter to start playing...");
+        br.read();
+        sc.running = false;
+        System.out.println("---------Playing Start---------");
+        sc.playAudio();
 
       }else if(userChoice==0){
         System.out.println("--------run offline test----------");
         sc.processoffline(1000,44);
 
       }
-      else if(userChoice==5){
+      else if(userChoice==6){
         System.out.println("--------Program End ----------");
         ProgramRun=false;
       }
