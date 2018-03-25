@@ -260,7 +260,7 @@ public class SoundCtrl{
    }
 
    int patternlength = 6*samples_per_bit;
-   int breaktime = 22000;
+   int breaktime = 8800;
 
    //magic parameters
    double power=0;
@@ -522,7 +522,7 @@ public class SoundCtrl{
             }
             int sample_rate = 44000;
             int bit_input_number = result.length();
-            int breaktime = sample_rate/2;
+            int breaktime = sample_rate/5;
             int patternlength = 6*input_sample_rate;
 
             byte inputarray[] = result.getBytes();
@@ -675,19 +675,24 @@ public class SoundCtrl{
           //@@ input_bit = bits number in txt  input_sample_rate = 440 --> 100kbs // 44 -->  1000kbs
           //sc.analysisAudio(5,10000,input_sample_rate);
           System.out.println("Enter part 3...");
-          sc.FSK(5,input_sample_rate);
-          br.read();
-          //sc.running = false;
-          System.out.println("Press Enter to start playing...");
-          br.read();
           System.out.println("---------Playing Start---------");
-          sc.playAudio();
+          sc.FSK(10,input_sample_rate);
+
+          br.read();
+          System.out.println("---------Playing end---------");
+          //sc.running = false;
+          // System.out.println("Press Enter to start playing...");
+          // br.read();
+          // System.out.println("---------Playing Start---------");
+          // sc.playAudio();
 
       }else if(userChoice==5){
-        sc.analysisAudio(5,10000,input_sample_rate);
-        System.out.println("Press Enter to start playing...");
+        sc.analysisAudio(10,10000,input_sample_rate);
+
         br.read();
         sc.running = false;
+        System.out.println("Press Enter to start playing...");
+        br.read();
         System.out.println("---------Playing Start---------");
         sc.playAudio();
 
