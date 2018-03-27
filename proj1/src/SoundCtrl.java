@@ -227,7 +227,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
   int relaxion = 0; //in case that start_index is always zero
 
-  for(int i=0;i<tmpbuffer.length;i++){
+  for(int i=0;i<tmpbuffer.length-patternlength;i++){
 
     /*if the preamble is partialy included in the current buffer,
      we do a shift operation and recall the function outside*/
@@ -261,7 +261,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
          }
 
        if(start_index!=0&&i-start_index>patternlength) {
-         System.out.print("find start point");
+         //System.out.print("find start point");
          if(start_index+packlength>tmpbuffer.length){
            int shiftlength = start_index-patternlength;
            for(int m = shiftlength;m<tmpbuffer.length;m++) tmpbuffer[m-shiftlength+relaxion] = tmpbuffer[m];
@@ -274,17 +274,13 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 }
 
 //decode the data in the given buffer from the start_index
- public void decoding(int packlength,byte[] tmpbuffer,int start_index,byte[] refer0,byte[] refer1,int scale){
+ public void decoding(int packlength,byte[] tmpbuffer,int start_index,byte[] refer0,byte[] refer1){
 
-   //magic parameters
-   double power=0;
-   double lowerbound = 100*scale;
-   double local_max = 0;
 
 
      System.out.println("start "+start_index);
 
-     System.out.print("bufferlength "+tmpbuffer.length);
+     //System.out.print("bufferlength "+tmpbuffer.length);
 
 
      int truncate = 5;
@@ -344,7 +340,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
 
           Runnable runner = new Runnable() {
-              int breaktime = 8800;
+              int breaktime = sample_rate*2/(num_pack-1);
               int packlength = num_bit*samples_per_bit/num_pack;
               byte buffer[] = new byte[packlength+breaktime];
               int patternlength = 6*samples_per_bit;
@@ -358,7 +354,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
                   int read_start = 0;
                   try {
                       while (running) {
-                          int count = line.read(buffer, read_start, buffer.length);
+                          int count = line.read(buffer, read_start, buffer.length-read_start);
                           if (count > 0) {
                               out.write(buffer, 0, count);
                           }
@@ -366,12 +362,12 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
                           if(read_start<0){
                             //if read_start<0, then we should do a shifting and find the start point from scratch
                             read_start = -read_start;
-                            System.out.print("Need to shift backwards, padding from"+read_start+"\n");
+                            System.out.print("Need to shift backwards, padding from"+read_start+"/"+buffer.length+"\n");
                             continue;
                           }else if(read_start>0){
                             //if read_start>0 we just find the start_index
-                            decoding(packlength,buffer,read_start,refer0,refer1,scale);
-                            System.out.print("find the start at"+read_start+"\n");
+                            decoding(packlength,buffer,read_start,refer0,refer1);
+                            System.out.print("find the start at "+read_start+"\n");
                         }
                         if(read_start==0) System.out.print("Did not find the start\n");
 
@@ -476,7 +472,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
             }
             int sample_rate = 44000;
             int bit_input_number = result.length();
-            int breaktime = sample_rate/5;
+            int breaktime = sample_rate*2/(num_pack-1);
             int patternlength = 6*samples_per_bit;
 
             byte inputarray[] = result.getBytes();
@@ -629,16 +625,15 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
           //@@ num_bit = bits number in txt  samples_per_bit = 440 --> 100kbs // 44 -->  1000kbs
           //sc.analysisAudio(5,10000,samples_per_bit);
           System.out.println("Enter part 3...");
-          sc.FSK(10,samples_per_bit);
+          sc.FSK(5,samples_per_bit);
+
+          System.out.println("---------Playing Start---------\n");
           br.read();
-          //sc.running = false;
-          System.out.println("Press Enter to start playing...");
-          br.read();
-          System.out.println("---------Playing Start---------");
-          sc.playAudio();
+
+          System.out.println("---------Playing end---------\n");
 
       }else if(userChoice==5){
-        sc.analysisAudio(10,10000,samples_per_bit);
+        sc.analysisAudio(5,10000,samples_per_bit);
 
         br.read();
         sc.running = false;
