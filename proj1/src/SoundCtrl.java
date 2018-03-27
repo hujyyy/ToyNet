@@ -364,11 +364,18 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
                           }
                           read_start = find_start(buffer,preamble,packlength,scale);
                           if(read_start<0){
+                            //if read_start<0, then we should do a shifting and find the start point from scratch
                             read_start = -read_start;
+                            System.out.print("Need to shift backwards, padding from"+read_start+"\n");
                             continue;
-                          }
-                          decoding(packlength,buffer,read_start,refer0,refer1,scale);
-                          read_start = 0;
+                          }else if(read_start>0){
+                            //if read_start>0 we just find the start_index
+                            decoding(packlength,buffer,read_start,refer0,refer1,scale);
+                            System.out.print("find the start at"+read_start+"\n");
+                        }
+                        if(read_start==0) System.out.print("Did not find the start\n");
+
+                        read_start = 0;
                       }
                       byte tmpbuffer[] = out.toByteArray();
                       out.close();
