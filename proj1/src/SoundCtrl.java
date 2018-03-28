@@ -276,14 +276,14 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 //decode the data in the given buffer from the start_index
  public int decoding(int packlength,byte[] tmpbuffer,int start_index,byte[] refer0,byte[] refer1){
     packlength>>=1;
-    fft_test ft = new fft_test();
+    //fft_test ft = new fft_test();
      System.out.println("start "+start_index);
 
      //System.out.print("bufferlength "+tmpbuffer.length);
 
 
      int truncate = 8;
-     int samples_per_bit = 44;
+     int samples_per_bit = 88;
      int stop_index = start_index+packlength;
 
       System.out.print("stop_index "+stop_index+"\n");
@@ -293,22 +293,24 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
      try{
      Writer output = new BufferedWriter(new FileWriter("test.txt", true));
-     double freq[] = new double[64];
+     //double freq[] = new double[64];
      for(int i=start_index;i<stop_index;i=i+samples_per_bit){
-       ft.getfreq(tmpbuffer,i,i+samples_per_bit,freq);
-       //inner_prod0 = correlation(tmpbuffer,refer0,i+truncate,truncate,samples_per_bit-truncate);
-       //inner_prod1 = correlation(tmpbuffer,refer1,i+truncate,truncate,samples_per_bit-truncate);
+       //ft.getfreq(tmpbuffer,i,samples_per_bit,freq);
+       inner_prod0 = correlation(tmpbuffer,refer0,i+truncate,truncate,samples_per_bit-truncate);
+       inner_prod1 = correlation(tmpbuffer,refer1,i+truncate,truncate,samples_per_bit-truncate);
        // System.out.print("inner product0--  ");
        // System.out.print(inner_prod0);
        // System.out.print("inner product1--  ");
        // System.out.print(inner_prod1);
        // System.out.print("\n ");
-       // if(inner_prod0>inner_prod1) output.append("0");
-       // else output.append("1");
-       if(freq[2]>100) output.append("1");
+       if(inner_prod0>1) output.append("1");
        else output.append("0");
-       if(freq[10]>100) output.append("1");
+       if(inner_prod1>0) output.append("1");
        else output.append("0");
+       // if(freq[2]>100) output.append("1");
+       // else output.append("0");
+       // if(freq[10]>100) output.append("1");
+       // else output.append("0");
      }
      output.flush();
 
@@ -491,9 +493,9 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
             byte inputarray[] = result.getBytes();
             //System.out.print(inputarray[0]);
-            byte soundarray[] = new byte[inputarray.length*samples_per_bit+num_pack*patternlength+(num_pack-1)*breaktime];
-            double frequencyOfSignal1 = 44000/64*2;
-            double frequencyOfSignal2 = 44000/64*10;
+            byte soundarray[] = new byte[inputarray.length*samples_per_bit/2+num_pack*patternlength+(num_pack-1)*breaktime];
+            double frequencyOfSignal1 = 2000;
+            double frequencyOfSignal2 = 10000;
             byte preamble[] = new byte[patternlength];
             double frequencyOfSignal3 = 5000.0; // prenmble frequency 15000hz 5000hz 15000hz
             double frequencyOfSignal4 = 15000.0;
@@ -528,19 +530,29 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
 
               //modulation
-              for(int i = 0;i<bits_per_pack;i=i+2){
+              for(int i = 0;i<bits_per_pack;i+=2){
                 if (inputarray [input_index] ==49){
                   //System.out.print(index+"\n");
                     for (int k = 0;k<samples_per_bit;k++){
                       double angle1 = (2.0 * Math.PI * k) / samplingInterval1;
                       soundarray[index++] = (byte) (scale * Math.sin(angle1));
                     }
+                }else {
+                    for (int k = 0;k<samples_per_bit;k++){
+                      double angle1 = (2.0 * Math.PI * k + Math.PI) / samplingInterval1;
+                      soundarray[index++] = (byte) (scale * Math.sin(angle1));
+                    }
                 }
                 if(inputarray [input_index+1] ==49){
                   for (int k = 0;k<samples_per_bit;k++){
                     double angle2 = (2.0 * Math.PI * k) / samplingInterval2;
-                    soundarray[index-samples_per_bit+k] = (byte) (scale * Math.sin(angle2));
-                }
+                    soundarray[index-samples_per_bit+k] += (byte) (scale * Math.sin(angle2));
+                  }
+                }else{
+                  for (int k = 0;k<samples_per_bit;k++){
+                    double angle2 = (2.0 * Math.PI * k + Math.PI) / samplingInterval2;
+                    soundarray[index-samples_per_bit+k] += (byte) (scale * Math.sin(angle2));
+                  }
 
               }
               input_index+=2;
@@ -585,7 +597,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
     System.out.println("---------Program Start---------");
     boolean ProgramRun=true;
-    int samples_per_bit = 44;
+    int samples_per_bit = 88;
     int num_pack = 100;
 
     while (ProgramRun) {
