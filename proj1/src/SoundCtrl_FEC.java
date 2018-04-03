@@ -282,8 +282,8 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
      //System.out.print("bufferlength "+tmpbuffer.length);
 
 
-     int truncate = 8;
-     int samples_per_bit = 88;
+     int truncate = 6;
+     int samples_per_bit = 44;
      int stop_index = start_index+packlength;
 
       System.out.print("stop_index "+stop_index+"\n");
@@ -293,10 +293,11 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
      //try{
      //Writer output = new BufferedWriter(new FileWriter("test.txt", true));
-     double freq[] = new double[64];
+     int windowsize = 32;
+     double freq[] = new double[windowsize];
 
      for(int i=start_index;i<stop_index;i=i+samples_per_bit){
-       ft.getfreq(tmpbuffer,i+truncate,64,freq);
+       ft.getfreq(tmpbuffer,i+truncate,32,windowsize,freq);
        //inner_prod0 = correlation(tmpbuffer,refer0,i+truncate,truncate,samples_per_bit-truncate);
        //inner_prod1 = correlation(tmpbuffer,refer1,i+truncate,truncate,samples_per_bit-truncate);
        // System.out.print("inner product0--  ");
@@ -308,11 +309,11 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
        // else output.append("0");
        // if(inner_prod1>0) output.append("1");
        // else output.append("0");
-       if(freq[2]>500) tri_result += "1";
+       if(freq[2]>460) tri_result += "1";
        else tri_result += "0";
-       if(freq[9]>500) tri_result += "1";
+       if(freq[9]>300) tri_result += "1";
        else tri_result += "0";
-       if(freq[15]>500) tri_result += "1";
+       if(freq[15]>130) {tri_result += "1";}
        else tri_result += "0";
      }
      //output.flush();
@@ -352,7 +353,7 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
 
           Runnable runner = new Runnable() {
               int breaktime = sample_rate*2/(num_pack-1);
-              int packlength = num_bit*samples_per_bit/num_pack;
+              int packlength = num_bit*samples_per_bit/num_pack/3;
               byte buffer[] = new byte[preamble.length+packlength+breaktime];
               int patternlength = 6*samples_per_bit;
 
@@ -614,14 +615,21 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
       int tmp = num_bits*rep_times;
       int check = 0;
 
-      System.out.print("the length of repetition output. Should be "+tmp+", actually is "+rep.length);
+      System.out.print("the length of repetition output. Should be "+tmp+", actually is "+rep.length +"\n");
       try{
-        Writer output = new BufferedWriter(new FileWriter("test2.txt", false));
-        output = new BufferedWriter(new FileWriter("test2.txt", true));
+        Writer output = new BufferedWriter(new FileWriter("test0.txt", false));
+//          Writer output1 = new BufferedWriter(new FileWriter("test_rep.txt", false));
+//          for (int i =0;i<rep.length;i++){
+//              if(rep[i]==49) output1.append("1");
+//              else output1.append("0");
+//          }
+//          output1.flush();
         for (int i =0;i<num_bits;i++){
           for (int j = 0;j<rep_times;j++) check += rep[i+j*num_bits]-48;
-          if(check>>(rep_times-1)==1) output.append("1");
+          if(check/((rep_times>>1)+1)==1) output.append("1");
           else output.append("0");
+
+          check = 0;
         }
         output.flush();
 
@@ -639,7 +647,8 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
     boolean ProgramRun=true;
     int samples_per_bit = 44;
     int num_bits = 30000;
-    int num_pack = 400;
+    int num_pack = 1000;
+    int rep_times = 1;
 
     while (ProgramRun) {
       System.out.println("Choose one mood (1,2,3) --->\n 1(Part1-1)\n 2(Part1-2)\n 3(part2)\n 4(transfer msg)\n 5(listen and decode)\n...");
@@ -701,10 +710,11 @@ public int find_start(byte[] tmpbuffer,byte[] preamble,int packlength,int scale)
           System.out.println("---------Playing end---------\n");
 
       }else if(userChoice==5){
-        sc.analysisAudio(num_pack,10000,samples_per_bit);
+        sc.analysisAudio(num_pack,num_bits*rep_times,samples_per_bit);
 
         br.read();
         sc.running = false;
+        sc.correction(num_bits,rep_times);
 
         System.out.println("Press Enter to start playing...");
 
