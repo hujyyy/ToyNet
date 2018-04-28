@@ -23,9 +23,10 @@ public class dataUtils{
 
 
     //
-    public void generate_all(String filename,byte[] output){
+    public byte[] generate_all(String filename){
       preamble_init();
-
+      byte[] out = new byte[1000];
+      return out;
     }
 
     public void generate_pack(String input,byte[] output,int outbegin,int outend){
