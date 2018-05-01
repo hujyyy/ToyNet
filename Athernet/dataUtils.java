@@ -42,7 +42,7 @@ public class dataUtils{
 
 
     int fft_winsize = 32;
-    int total_data_size = 10000;
+    int total_data_size = 50000;
     int num_pack = 50;
     int num_freq = 10;
     int freq_step = 1;
@@ -63,21 +63,28 @@ public class dataUtils{
         preamble_init();
 
         File filename = new File(pathname); // 要读取以上路径的input。txt文件
-        InputStreamReader reader = new InputStreamReader(new FileInputStream(filename)); // 建立一个输入流对象reader
-        BufferedReader txtbr = new BufferedReader(reader); // 建立一个对象，它把文件内容转成计算机能读懂的语言
-        String line = "";
+        //InputStreamReader reader = new InputStreamReader(new FileInputStream(filename)); // 建立一个输入流对象reader
+        //BufferedReader txtbr = new BufferedReader(reader); // 建立一个对象，它把文件内容转成计算机能读懂的语言
+        BufferedInputStream input = new BufferedInputStream(new FileInputStream(filename));
         String result = "";
-        line = txtbr.readLine();
+        String slice = "";
+
+        byte[] buf = new byte[1];
+
+        int in =0;
         //System.out.print(line);
-        while (line != null) {
-            result = result + line;
-            line = txtbr.readLine(); // 一次读入一行数据
+        while (in != -1) {
+            result = result + slice;
+            //slice = txtbr.readLine(); // 一次读入一行数据
+            in = input.read(buf,0,1);
+            slice = Integer.toBinaryString((buf[0] & 0xFF) + 0x100).substring(1);
+
         }
         int total_input_size = result.length();  // read file total_input_size = 10000 bits
         int pack_data_size_raw = total_input_size / num_pack;  // 10000 bits / 100 bags = 100
         pack_data_size = pack_data_size_raw*samples_per_bit/num_freq;
         pack_size = preamble_size + pack_data_size; // pack_size = preamble + pure_data per bag * sample per bit
-        //System.out.print(pack_size);
+        System.out.print("input file size: "+total_input_size+"\n");
         int total_output_size = pack_size*num_pack;
         byte[] output = new byte[total_output_size];
 

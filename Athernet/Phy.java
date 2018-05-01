@@ -20,11 +20,12 @@ public class Phy{
 
 
   static int sampleRate = 48000;
-  static int samples_per_bit = 32;
+  static int samples_per_bit = du.samples_per_bit;
   protected boolean Rx_running = true;
   int scale = du.scale;
-  String pathname = "./input.txt";
-  int data_size = 10000; // in bits
+  String pathname = "./INPUT.bin";
+  //String pathname = "./input.txt";
+  int data_size = du.total_data_size; // in bits
   final AudioFormat format = new AudioFormat(sampleRate, 8, 1, true, true);
   Node_status status = Node_status.A;
 
@@ -67,6 +68,27 @@ public class Phy{
           }catch (IOException e){e.printStackTrace();}
         }
 
+        public void writeOut_bin(byte[] writeData){
+          byte[] out = new byte[writeData.length/8];
+
+          for(int i=0;i<out.length;i++){
+              byte tmp = 0;
+              for(int j=0;j<8;j++){
+                int index = 8*i+j;
+                tmp += (byte)(writeData[index]<<(7-j)) ;
+              }
+              out[i] = tmp;
+          }
+
+          try{
+            OutputStream output = new BufferedOutputStream(new FileOutputStream("OUTPUT.bin"));
+            output.write(out);
+            output.close();
+          }catch (IOException e){e.printStackTrace();}
+
+
+
+        }
 
         public void run() {
           System.out.print("------------------Rx starts--------------\n");
@@ -200,7 +222,7 @@ public class Phy{
                    System.exit(-1);
                }
           System.out.print("-----------------Rx ends--------------\n");
-          writeOut(out_array);
+          writeOut_bin(out_array);
         }
     };
 
