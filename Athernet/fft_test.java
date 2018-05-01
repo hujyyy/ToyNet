@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.util.*;
+
 
 public class fft_test {
     public static Complex[] fft(Complex[] x) {
@@ -38,10 +40,10 @@ public class fft_test {
         }
         return y;
     }
-    public static void getfreq(byte input[],int start,int length,int winsize,double output[]){
+    public static void getfreq(ArrayList<Byte> input,int start,int length,int winsize,double output[]){
         Complex comp[] = new Complex[winsize];
         for(int i =0;i<winsize;i++){
-            if(i<length)comp[i] = new Complex(input[i+start],0);
+            if(i<length)comp[i] = new Complex(input.get(i+start),0);
             else comp[i] = new Complex(0,0);
         }
 
@@ -50,7 +52,6 @@ public class fft_test {
         for(int i=0;i<winsize;i++){
             output[i]=fft_out[i].abs();
             //System.out.print(i+" "+output[i]+"\n");
-            //System.out.print(y[i].toString()+"\n");
         }
 
 
